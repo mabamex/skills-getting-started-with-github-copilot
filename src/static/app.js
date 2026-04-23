@@ -19,12 +19,21 @@ document.addEventListener("DOMContentLoaded", () => {
         activityCard.className = "activity-card";
 
         const spotsLeft = details.max_participants - details.participants.length;
+        const participantItems = details.participants.length > 0
+          ? details.participants.map(p => `<li data-activity="${name}" data-email="${p}"><span class="participant-email">${p}</span><button class="remove-btn" title="Unregister ${p}" aria-label="Remove ${p}">&times;</button></li>`).join("")
+          : "<li class='no-participants'>No participants yet</li>";
 
         activityCard.innerHTML = `
           <h4>${name}</h4>
           <p>${details.description}</p>
           <p><strong>Schedule:</strong> ${details.schedule}</p>
-          <p><strong>Availability:</strong> ${spotsLeft} spots left</p>
+          <p><strong>Availability:</strong> <span class="spots-badge ${spotsLeft === 0 ? 'spots-full' : ''}">${
+            spotsLeft === 0 ? 'Full' : `${spotsLeft} spots left`
+          }</span></p>
+          <div class="participants-section">
+            <p class="participants-title"><strong>Participants (${details.participants.length}/${details.max_participants}):</strong></p>
+            <ul class="participants-list">${participantItems}</ul>
+          </div>
         `;
 
         activitiesList.appendChild(activityCard);
@@ -78,6 +87,28 @@ document.addEventListener("DOMContentLoaded", () => {
       messageDiv.className = "error";
       messageDiv.classList.remove("hidden");
       console.error("Error signing up:", error);
+    }
+  });
+
+  // Handle unregister (delete participant)
+  activitiesList.addEventListener("click", async (event) => {
+    const btn = event.target.closest(".remove-btn");
+    if (!btn) return;
+
+    const li = btn.closest("li");
+    const activity = li.dataset.activity;
+    const email = li.dataset.email;
+
+    try {
+      const response = await fetch(
+        `/activities/${encodeURIComponent(activity)}/signup?email=${encodeURIComponent(email)}`,
+        { method: "DELETE" }
+      );
+      if (response.ok) {
+        await fetchActivities();
+      }
+    } catch (error) {
+      console.error("Error unregistering participant:", error);
     }
   });
 
